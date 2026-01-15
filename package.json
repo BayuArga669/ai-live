@@ -1,0 +1,39 @@
+{
+  "name": "tiktok-live-ai",
+  "version": "1.0.0",
+  "description": "AI Assistant untuk TikTok Live dengan Groq dan Eleven Labs TTS",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "demo": "node src/index.js --demo",
+    "dev": "node src/server.js",
+    "desktop": "electron ./electron-main.js"
+  },
+  "keywords": [
+    "tiktok",
+    "live",
+    "ai",
+    "groq",
+    "elevenlabs",
+    "tts"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "elevenlabs": "^0.17.0",
+    "express": "^5.2.1",
+    "groq-sdk": "^0.8.0",
+    "obs-websocket-js": "^5.0.7",
+    "open": "^11.0.0",
+    "play-sound": "^1.1.6",
+    "sound-play": "^1.1.0",
+    "tiktok-live-connector": "^1.1.8",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7"
+  }
+}

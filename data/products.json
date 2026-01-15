@@ -1,0 +1,28 @@
+{
+  "store_name": "Toko Saya",
+  "products": [
+    {
+      "id": 1,
+      "name": "Contoh Produk 1",
+      "price": 150000,
+      "description": "ambukam",
+      "stock": 50,
+      "obs_scene": "Scene Produk 1"
+    },
+    {
+      "id": 2,
+      "name": "Contoh Produk 2",
+      "price": 250000,
+      "description": "Deskripsi produk kedua, best seller",
+      "stock": 30,
+      "obs_scene": "Scene Produk 2"
+    }
+  ],
+  "promotions": [
+    {
+      "code": "LIVE10",
+      "discount": 10,
+      "description": "Diskon 10% khusus penonton live"
+    }
+  ]
+}

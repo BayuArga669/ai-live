@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Live AI Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">🎙️</span>
+        <span class="logo-text">TikTok AI</span>
+      </div>
+      
+      <nav class="nav">
+        <button class="nav-item active" data-panel="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-panel="settings">
+          <span class="nav-icon">⚙️</span>
+          <span>Settings</span>
+        </button>
+        <button class="nav-item" data-panel="products">
+          <span class="nav-icon">📦</span>
+          <span>Products</span>
+        </button>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Offline</span>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Dashboard Panel -->
+      <section class="panel active" id="dashboard">
+        <header class="panel-header">
+          <h1>Dashboard</h1>
+          <div class="controls">
+            <button class="btn btn-success" id="startBtn">▶️ Start</button>
+            <button class="btn btn-danger" id="stopBtn" disabled>⏹️ Stop</button>
+            <label class="checkbox-label">
+              <input type="checkbox" id="demoMode" checked>
+              Demo Mode
+            </label>
+          </div>
+        </header>
+        
+        <!-- Demo Chat Input -->
+        <div class="demo-input" id="demoInput" style="display: none;">
+          <input type="text" id="demoMessage" placeholder="Ketik pesan untuk simulasi chat...">
+          <button class="btn btn-primary" id="sendDemo">Kirim</button>
+        </div>
+        
+        <!-- Chat Logs -->
+        <div class="chat-container">
+          <h2>💬 Live Chat & Responses</h2>
+          <div class="chat-logs" id="chatLogs">
+            <div class="empty-state">Belum ada chat. Klik Start untuk memulai.</div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Settings Panel -->
+      <section class="panel" id="settings">
+        <header class="panel-header">
+          <h1>⚙️ Settings</h1>
+          <button class="btn btn-primary" id="saveSettings">💾 Save Settings</button>
+        </header>
+        
+        <div class="settings-form">
+          <div class="form-group">
+            <label>TikTok Username</label>
+            <input type="text" id="tiktokUsername" placeholder="username_yang_live">
+            <small>Username TikTok yang sedang live (tanpa @)</small>
+          </div>
+          
+          <div class="form-group">
+            <label>Groq API Key</label>
+            <input type="password" id="groqApiKey" placeholder="gsk_...">
+            <small>Dapatkan dari <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a></small>
+          </div>
+          
+          <div class="form-group">
+            <label>ElevenLabs API Key</label>
+            <input type="password" id="elevenlabsApiKey" placeholder="...">
+            <small>Dapatkan dari <a href="https://elevenlabs.io" target="_blank">elevenlabs.io</a></small>
+          </div>
+          
+          <div class="form-group">
+            <label>Voice</label>
+            <select id="voiceId">
+              <option value="pNInz6obpgDQGcFmaJgB">Adam (Pria, deep)</option>
+              <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Wanita, calm)</option>
+              <option value="AZnzlk1XvdvUeBnXmlld">Domi (Wanita, energetic)</option>
+              <option value="EXAVITQu4vr4xnSDxMaL">Bella (Wanita, soft)</option>
+              <option value="ErXwobaYiN019PkySvjV">Antoni (Pria, friendly)</option>
+              <option value="MF3mGyEYCl7XYWbV9V6O">Elli (Wanita, young)</option>
+              <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Pria, narratif)</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Response Delay (ms)</label>
+            <input type="number" id="responseDelay" value="2000" min="500" max="10000">
+            <small>Delay sebelum AI merespons (dalam milidetik)</small>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Products Panel -->
+      <section class="panel" id="products">
+        <header class="panel-header">
+          <h1>📦 Products</h1>
+          <button class="btn btn-primary" id="saveProducts">💾 Save Products</button>
+        </header>
+        
+        <div class="products-form">
+          <div class="form-group">
+            <label>Nama Toko</label>
+            <input type="text" id="storeName" placeholder="Nama Toko Anda">
+          </div>
+          
+          <h3>Daftar Produk</h3>
+          <div id="productList"></div>
+          <button class="btn btn-secondary" id="addProduct">+ Tambah Produk</button>
+          
+          <h3>Promo</h3>
+          <div id="promoList"></div>
+          <button class="btn btn-secondary" id="addPromo">+ Tambah Promo</button>
+        </div>
+      </section>
+    </main>
+  </div>
+  
+  <script src="app.js"></script>
+</body>
+</html>
