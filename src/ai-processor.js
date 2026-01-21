@@ -1,10 +1,5 @@
 import Groq from 'groq-sdk';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import * as database from './database.js';
 
 /**
  * Groq AI Processor
@@ -13,22 +8,31 @@ const __dirname = path.dirname(__filename);
 export class AIProcessor {
     constructor(apiKey) {
         this.groq = new Groq({ apiKey });
-        this.model = 'llama-3.3-70b-versatile'; // Fast and capable model
+        this.model = 'llama-3.3-70b-versatile';
         this.products = null;
         this.systemPrompt = '';
         this.maxResponseLength = parseInt(process.env.MAX_RESPONSE_LENGTH) || 1000;
+        this.conversationHistory = []; // Store recent conversations
+        this.recentResponses = []; // Track recent responses to avoid repetition
         this.loadProductData();
         this.buildSystemPrompt();
     }
 
     loadProductData() {
         try {
-            const dataPath = path.join(__dirname, '..', 'data', 'products.json');
-            const data = fs.readFileSync(dataPath, 'utf-8');
-            this.products = JSON.parse(data);
-            console.log(`📦 Loaded ${this.products.products.length} products from data`);
+            const store_name = database.getSetting('store_name', 'Toko Online');
+            const products = database.getAllProducts();
+            const promotions = database.getAllPromotions();
+
+            this.products = {
+                store_name,
+                products: products || [],
+                promotions: promotions || []
+            };
+
+            console.log(`📦 Loaded ${this.products.products.length} products from database`);
         } catch (error) {
-            console.warn('⚠️ Tidak bisa load products.json, menggunakan data default');
+            console.warn('⚠️ Error loading products from database:', error.message);
             this.products = {
                 store_name: 'Toko Online',
                 products: [],
@@ -38,68 +42,144 @@ export class AIProcessor {
     }
 
     buildSystemPrompt() {
-        const productList = this.products.products.map(p =>
-            `- ${p.name}: Rp ${p.price.toLocaleString('id-ID')} (${p.description}, stok: ${p.stock})`
-        ).join('\n');
+        // Build detailed product list with numbering
+        const productList = this.products.products
+            .filter(p => p.name && p.name.trim() !== '') // Filter empty products
+            .map((p, i) =>
+                `${i + 1}. ${p.name} - ${this.priceToWords(p.price)} (${p.description || 'produk unggulan'}, stok: ${p.stock})`
+            ).join('\n');
 
         const promoList = this.products.promotions?.map(p =>
             `- Kode "${p.code}": ${p.description}`
-        ).join('\n') || 'Tidak ada promo saat ini';
+        ).join('\n') || 'Tidak ada promo';
 
-        this.systemPrompt = `Kamu adalah host penjualan live streaming yang ANTUSIAS dan DETAIL untuk "${this.products.store_name}".
+        this.systemPrompt = `Kamu adalah sales live streaming untuk "${this.products.store_name}".
 
-GAYA BICARA:
-- Bicara seperti host live shopping yang energik dan meyakinkan
-- Gunakan bahasa santai tapi meyakinkan
-- Berikan penjelasan yang DETAIL tentang produk
-- Jelaskan MANFAAT dan KEUNGGULAN produk
-- Buat penonton merasa HARUS BELI sekarang
+ATURAN WAJIB:
+- Sebut nama user dengan "kak [nama]"
+- TANPA emoji
+- Respons HARUS berbeda setiap kali
 
-PANDUAN RESPONS:
-1. Selalu sapa dengan "Halo kak [nama]!" di awal
-2. Jelaskan produk dengan DETAIL (4-6 kalimat)
-3. Sebutkan KEUNGGULAN dan MANFAAT produk
-4. Bandingkan dengan harga pasaran jika relevan
-5. Mention promo yang sedang berlaku
-6. Akhiri dengan ajakan untuk klik keranjang kuning
+LARANGAN MUTLAK:
+- DILARANG KERAS bertanya balik kepada user
+- DILARANG bilang "apa yang ingin kamu ketahui?"
+- DILARANG bilang "mau tahu apa tentang produk ini?"
+- DILARANG minta klarifikasi apapun
+- JIKA user tanya produk, LANGSUNG JELASKAN!
 
-PENTING - FORMAT HARGA:
-- JANGAN gunakan format angka seperti "Rp 150.000"
-- SELALU sebutkan harga dalam kata-kata:
-  - 150000 → "seratus lima puluh ribu rupiah"
-  - 250000 → "dua ratus lima puluh ribu rupiah"
-  - 1500000 → "satu juta lima ratus ribu rupiah"
+SAAT USER TANYA PRODUK (spill, produk, harga):
+Kamu WAJIB langsung memberikan info lengkap:
+1. Nama produk
+2. Harga (dalam kata: seratus ribu, bukan 100.000)
+3. Deskripsi/keunggulan
+4. Ajak beli
 
-DAFTAR PRODUK:
+FORMAT JAWABAN PRODUK:
+"Oke kak [nama]! [Nama Produk] ini harganya [harga dalam kata]. [Deskripsi]. Buruan order kak sebelum kehabisan!"
+
+=== PRODUK TERSEDIA ===
 ${productList || 'Belum ada produk'}
 
-PROMO AKTIF:
-${promoList}
+=== PROMO ===
+${promoList}`;
+    }
 
-CONTOH RESPONS YANG BAIK:
-"Halo kak Budi! Wah kak, produk ini bagus banget loh! Bahannya premium berkualitas tinggi, nyaman dipakai sehari-hari. Harganya cuma seratus lima puluh ribu rupiah aja kak, padahal di tempat lain bisa dua ratus ribuan loh! Stoknya terbatas banget kak, tinggal beberapa aja. Buruan langsung klik keranjang kuning sebelum kehabisan ya kak! Jangan sampai nyesel!"
+    // Helper to convert price to Indonesian words
+    priceToWords(price) {
+        if (!price || price === 0) return 'gratis';
 
-Ingat: Buat penonton TERTARIK dan YAKIN untuk membeli!`;
+        const num = parseInt(price);
+        if (num >= 1000000) {
+            const juta = Math.floor(num / 1000000);
+            const sisa = num % 1000000;
+            if (sisa === 0) return `${this.numberWord(juta)} juta rupiah`;
+            return `${this.numberWord(juta)} juta ${this.priceToWords(sisa)}`;
+        }
+        if (num >= 1000) {
+            const ribu = Math.floor(num / 1000);
+            return `${this.numberWord(ribu)} ribu rupiah`;
+        }
+        return `${num} rupiah`;
+    }
+
+    numberWord(n) {
+        const words = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh',
+            'sebelas', 'dua belas', 'tiga belas', 'empat belas', 'lima belas'];
+        if (n <= 15) return words[n];
+        if (n < 20) return words[n - 10] + ' belas';
+        if (n < 100) {
+            const puluhan = Math.floor(n / 10);
+            const satuan = n % 10;
+            return words[puluhan] + ' puluh' + (satuan ? ' ' + words[satuan] : '');
+        }
+        if (n < 1000) {
+            const ratusan = Math.floor(n / 100);
+            const sisa = n % 100;
+            const prefix = ratusan === 1 ? 'seratus' : words[ratusan] + ' ratus';
+            return prefix + (sisa ? ' ' + this.numberWord(sisa) : '');
+        }
+        return n.toString();
     }
 
     async processMessage(chatData) {
         const { nickname, message } = chatData;
 
+        // Build messages with conversation history for context
+        const messages = [
+            { role: 'system', content: this.systemPrompt }
+        ];
+
+        // Add recent conversation history (last 5 exchanges)
+        this.conversationHistory.slice(-10).forEach(conv => {
+            messages.push(conv);
+        });
+
+        // Add instruction to avoid recent responses
+        let variationHint = '';
+        if (this.recentResponses.length > 0) {
+            variationHint = `\n\n[PENTING: Jangan gunakan respons seperti: "${this.recentResponses.slice(-3).join('", "')}" - buat yang BERBEDA!]`;
+        }
+
+        // Add random variation seed (NO questions - removed "pertanyaan balik")
+        const randomSeeds = [
+            'Balas dengan gaya energik',
+            'Balas dengan gaya santai',
+            'Balas singkat dan friendly',
+            'Langsung jelaskan dengan antusias'
+        ];
+        const seed = randomSeeds[Math.floor(Math.random() * randomSeeds.length)];
+
+        messages.push({
+            role: 'user',
+            content: `${nickname} bilang: "${message}"${variationHint}\n\n[Style: ${seed}]`
+        });
+
         try {
             const completion = await this.groq.chat.completions.create({
-                messages: [
-                    { role: 'system', content: this.systemPrompt },
-                    { role: 'user', content: `Pertanyaan dari "${nickname}": "${message}"` }
-                ],
+                messages,
                 model: this.model,
-                max_tokens: 500,
-                temperature: 0.7,
+                max_tokens: 300,
+                temperature: 0.8, // Lower for more instruction-following
+                top_p: 0.9,
             });
 
             const response = completion.choices[0]?.message?.content || '';
-
-            // Trim response if too long
             const cleanResponse = response.trim().substring(0, this.maxResponseLength);
+
+            // Store in history
+            this.conversationHistory.push({ role: 'user', content: `${nickname}: ${message}` });
+            this.conversationHistory.push({ role: 'assistant', content: cleanResponse });
+
+            // Keep history manageable
+            if (this.conversationHistory.length > 20) {
+                this.conversationHistory = this.conversationHistory.slice(-20);
+            }
+
+            // Track recent responses to avoid repetition
+            this.recentResponses.push(cleanResponse);
+            if (this.recentResponses.length > 10) {
+                this.recentResponses.shift();
+            }
 
             console.log(`🤖 AI Response: ${cleanResponse}`);
             return cleanResponse;
@@ -114,5 +194,11 @@ Ingat: Buat penonton TERTARIK dan YAKIN untuk membeli!`;
         this.loadProductData();
         this.buildSystemPrompt();
         console.log('🔄 Products reloaded');
+    }
+
+    // Clear conversation history
+    clearHistory() {
+        this.conversationHistory = [];
+        this.recentResponses = [];
     }
 }

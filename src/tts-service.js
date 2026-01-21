@@ -1,4 +1,4 @@
-import ElevenLabs from 'elevenlabs';
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,56 +7,159 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Eleven Labs Text-to-Speech Service
+ * Eleven Labs Text-to-Speech Service with Multiple API Key Support
+ * Automatically rotates to the next API key when credits are exhausted
  */
 export class TTSService {
-    constructor(apiKey) {
-        this.client = new ElevenLabs.ElevenLabsClient({ apiKey });
+    constructor(apiKeys) {
+        // Support multiple API keys (comma-separated string or array)
+        if (typeof apiKeys === 'string') {
+            this.apiKeys = apiKeys.split(',').map(k => k.trim()).filter(k => k);
+        } else if (Array.isArray(apiKeys)) {
+            this.apiKeys = apiKeys.filter(k => k);
+        } else {
+            this.apiKeys = [apiKeys];
+        }
+
+        this.currentKeyIndex = 0;
+        this.client = new ElevenLabsClient({ apiKey: this.getCurrentApiKey() });
         // Default to "Adam" voice which supports Indonesian
         this.voiceId = process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB';
         this.audioDir = path.join(__dirname, '..', 'audio');
+
+        // Usage tracking
+        this.usageStats = {
+            totalCharacters: 0,
+            sessionCharacters: 0,
+            requestCount: 0,
+            lastRequestChars: 0,
+            history: [] // Last 50 requests for graph
+        };
 
         // Ensure audio directory exists
         if (!fs.existsSync(this.audioDir)) {
             fs.mkdirSync(this.audioDir, { recursive: true });
         }
 
-        console.log(`🔊 TTS Service initialized with voice: ${this.voiceId}`);
+        console.log(`🔊 TTS Service initialized with ${this.apiKeys.length} API key(s), voice: ${this.voiceId}`);
+    }
+
+    // Get current usage stats
+    getUsageStats() {
+        return { ...this.usageStats };
+    }
+
+    // Reset session stats
+    resetSessionStats() {
+        this.usageStats.sessionCharacters = 0;
+        this.usageStats.requestCount = 0;
+        this.usageStats.history = [];
+    }
+
+    getCurrentApiKey() {
+        return this.apiKeys[this.currentKeyIndex];
+    }
+
+    rotateApiKey() {
+        const previousIndex = this.currentKeyIndex;
+        this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+
+        // Reinitialize client with new API key
+        this.client = new ElevenLabsClient({ apiKey: this.getCurrentApiKey() });
+
+        console.log(`🔄 Rotated API key from index ${previousIndex} to ${this.currentKeyIndex}`);
+        return this.currentKeyIndex !== 0; // Returns false if we've cycled through all keys
+    }
+
+    isQuotaError(error) {
+        // Check for quota exhaustion errors (401 unauthorized or 429 rate limit)
+        const message = error.message?.toLowerCase() || '';
+        const statusCode = error.statusCode || error.status;
+
+        return (
+            statusCode === 401 ||
+            statusCode === 429 ||
+            message.includes('quota') ||
+            message.includes('limit') ||
+            message.includes('exceeded') ||
+            message.includes('credits') ||
+            message.includes('unauthorized') ||
+            message.includes('insufficient')
+        );
     }
 
     async textToSpeech(text, filename = null) {
-        try {
-            const outputFilename = filename || `tts-${Date.now()}.mp3`;
-            const outputPath = path.join(this.audioDir, outputFilename);
+        const outputFilename = filename || `tts-${Date.now()}.mp3`;
+        const outputPath = path.join(this.audioDir, outputFilename);
 
-            console.log(`🎙️ Generating speech: "${text.substring(0, 50)}..."`);
+        let lastError = null;
+        const startKeyIndex = this.currentKeyIndex;
 
-            const audio = await this.client.textToSpeech.convert(this.voiceId, {
-                text: text,
-                model_id: 'eleven_multilingual_v2',
-                output_format: 'mp3_44100_128',
-                voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.75,
-                    style: 0.0,
-                    use_speaker_boost: true,
-                },
-            });
+        // Try with current and all remaining API keys
+        do {
+            try {
+                console.log(`🎙️ Generating speech (API key ${this.currentKeyIndex + 1}/${this.apiKeys.length}): "${text.substring(0, 50)}..."`);
 
-            // Write audio stream to file
-            const chunks = [];
-            for await (const chunk of audio) {
-                chunks.push(chunk);
+                const audio = await this.client.textToSpeech.convert(this.voiceId, {
+                    text: text,
+                    model_id: 'eleven_multilingual_v2',
+                    output_format: 'mp3_44100_128',
+                    voice_settings: {
+                        stability: 0.5,
+                        similarity_boost: 0.75,
+                        style: 0.0,
+                        use_speaker_boost: true,
+                    },
+                });
+
+                // Write audio stream to file
+                const chunks = [];
+                for await (const chunk of audio) {
+                    chunks.push(chunk);
+                }
+                const buffer = Buffer.concat(chunks);
+                fs.writeFileSync(outputPath, buffer);
+
+                // Track usage
+                const charCount = text.length;
+                this.usageStats.totalCharacters += charCount;
+                this.usageStats.sessionCharacters += charCount;
+                this.usageStats.requestCount++;
+                this.usageStats.lastRequestChars = charCount;
+                this.usageStats.history.push({
+                    timestamp: Date.now(),
+                    characters: charCount
+                });
+                // Keep only last 50 entries
+                if (this.usageStats.history.length > 50) {
+                    this.usageStats.history.shift();
+                }
+
+                console.log(`✅ Audio saved: ${outputFilename} (${charCount} chars used)`);
+                return outputPath;
+            } catch (error) {
+                lastError = error;
+                console.error(`❌ TTS Error with API key ${this.currentKeyIndex + 1}:`, error.message);
+
+                // Check if this is a quota/auth error and we have more keys to try
+                if (this.isQuotaError(error) && this.apiKeys.length > 1) {
+                    console.log(`⚠️ API key ${this.currentKeyIndex + 1} may have exhausted credits, trying next key...`);
+                    const hasMoreKeys = this.rotateApiKey();
+
+                    // If we've cycled back to the start, all keys are exhausted
+                    if (this.currentKeyIndex === startKeyIndex) {
+                        console.error('❌ All API keys have been tried and failed');
+                        break;
+                    }
+                } else {
+                    // Not a quota error, don't retry
+                    throw error;
+                }
             }
-            const buffer = Buffer.concat(chunks);
-            fs.writeFileSync(outputPath, buffer);
+        } while (this.currentKeyIndex !== startKeyIndex);
 
-            console.log(`✅ Audio saved: ${outputFilename}`);
-            return outputPath;
-        } catch (error) {
-            console.error('❌ TTS Error:', error.message);
-            throw error;
-        }
+        // All keys failed
+        throw lastError || new Error('All ElevenLabs API keys exhausted or failed');
     }
 
     // List available voices (useful for setup)

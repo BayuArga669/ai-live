@@ -34,7 +34,10 @@ TIKTOK_USERNAME=username_tiktok
 
 # API Keys
 GEMINI_API_KEY=your_gemini_api_key
-ELEVENLABS_API_KEY=your_elevenlabs_api_key
+
+# ElevenLabs API Key (mendukung multiple keys, pisahkan dengan koma)
+# Ketika credits key pertama habis, otomatis beralih ke key berikutnya
+ELEVENLABS_API_KEY=key_1,key_2,key_3
 ```
 
 ### 3. Setup Produk

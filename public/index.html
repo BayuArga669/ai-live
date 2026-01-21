@@ -1,148 +1,552 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TikTok Live AI Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>TikTok AI Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --color-bg-dark: #0f0f1a;
+      --color-glass: rgba(30, 30, 46, 0.7);
+      --color-accent: #ff2d55;
+    }
+    .glass-panel {
+      @apply bg-[rgba(30,30,46,0.6)] backdrop-blur-xl border border-white/5 shadow-2xl rounded-3xl;
+    }
+    .nav-item.active {
+      background: linear-gradient(90deg, #ff2d55 0%, #ff6b35 100%);
+      @apply text-white shadow-lg shadow-red-500/20;
+    }
+  </style>
 </head>
-<body>
-  <div class="app">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="logo">
-        <span class="logo-icon">🎙️</span>
-        <span class="logo-text">TikTok AI</span>
+
+<body class="bg-[#0f0f1a] text-white font-['Inter'] h-screen overflow-hidden flex p-4 gap-6">
+
+  <!-- Sidebar -->
+  <aside class="w-[280px] glass-panel flex flex-col p-6 shrink-0 relative overflow-hidden z-20">
+    <!-- Glow Effect -->
+    <div class="absolute top-0 left-0 w-full h-40 bg-red-500/10 blur-[60px] -z-10"></div>
+
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-10 mt-4">
+      <div
+        class="w-16 h-16 bg-gradient-to-br from-[#ff2d55] to-[#ff6b35] rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/30 mb-4">
+        <span class="text-3xl">🎙️</span>
       </div>
-      
-      <nav class="nav">
-        <button class="nav-item active" data-panel="dashboard">
-          <span class="nav-icon">📊</span>
-          <span>Dashboard</span>
+      <h1 class="text-xl font-bold tracking-tight">TikTok AI</h1>
+      <p class="text-xs text-white/40 mt-1">Live Assistant v1.0</p>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex flex-col gap-2 flex-1">
+      <button
+        class="nav-item active flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group hover:bg-white/5 cursor-pointer text-left"
+        data-panel="dashboard">
+        <span class="text-xl">📊</span>
+        <span class="font-medium text-sm">Dashboard</span>
+      </button>
+      <button
+        class="nav-item flex items-center gap-4 px-4 py-3.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all duration-300 cursor-pointer text-left"
+        data-panel="settings">
+        <span class="text-xl">⚙️</span>
+        <span class="font-medium text-sm">Settings</span>
+      </button>
+      <button
+        class="nav-item flex items-center gap-4 px-4 py-3.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all duration-300 cursor-pointer text-left"
+        data-panel="products">
+        <span class="text-xl">📦</span>
+        <span class="font-medium text-sm">Products</span>
+      </button>
+      <button
+        class="nav-item flex items-center gap-4 px-4 py-3.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all duration-300 cursor-pointer text-left"
+        data-panel="idle-audio">
+        <span class="text-xl">🔊</span>
+        <span class="font-medium text-sm">Idle Audio</span>
+      </button>
+    </nav>
+
+    <!-- Status Footer -->
+    <div class="mt-auto pt-6 border-t border-white/5">
+      <div class="flex items-center gap-3">
+        <div class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse"
+          id="statusDot"></div>
+        <span class="text-sm font-medium text-white/80" id="statusText">Offline</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 flex flex-col gap-6 h-full min-w-0 relative">
+
+    <!-- Top Bar -->
+    <header class="glass-panel p-4 flex items-center justify-between z-10 shrink-0">
+
+      <!-- Search/Input Mock -->
+      <div class="flex-1 max-w-2xl relative group hidden" id="demoInput">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <span class="text-white/30 text-lg">💬</span>
+        </div>
+        <input type="text" id="demoMessage"
+          class="w-full bg-[#0f0f1a]/50 border border-white/5 rounded-xl py-3 pl-12 pr-24 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all font-light"
+          placeholder="Ketik pesan simulasi...">
+        <button id="sendDemo"
+          class="absolute right-2 top-1.5 bottom-1.5 px-4 bg-gradient-to-r from-[#ff2d55] to-[#ff6b35] hover:shadow-[0_0_15px_rgba(255,45,85,0.4)] rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer">
+          Kirim
         </button>
-        <button class="nav-item" data-panel="settings">
-          <span class="nav-icon">⚙️</span>
-          <span>Settings</span>
+      </div>
+
+      <!-- Placeholder if Demo Hidden -->
+      <div id="demoPlaceholder" class="flex-1 text-white/30 text-sm font-light italic ml-4">
+        Running in Live Mode...
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3 ml-6">
+        <button id="startBtn"
+          class="flex items-center gap-2 px-5 py-2.5 bg-[#00d26a]/10 border border-[#00d26a]/20 text-[#00d26a] hover:bg-[#00d26a] hover:text-[#0f0f1a] rounded-xl font-medium transition-all duration-300 cursor-pointer">
+          <span>▶</span> Start
         </button>
-        <button class="nav-item" data-panel="products">
-          <span class="nav-icon">📦</span>
-          <span>Products</span>
+        <button id="stopBtn" disabled
+          class="flex items-center gap-2 px-5 py-2.5 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl font-medium transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+          <span>⏹</span> Stop
         </button>
-      </nav>
-      
-      <div class="sidebar-footer">
-        <div class="status-indicator">
-          <span class="status-dot" id="statusDot"></span>
-          <span id="statusText">Offline</span>
+
+        <div class="h-8 w-[1px] bg-white/10 mx-2"></div>
+
+        <label class="flex items-center gap-3 cursor-pointer group">
+          <div class="relative">
+            <input type="checkbox" id="demoMode" checked class="sr-only peer">
+            <div
+              class="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500">
+            </div>
+          </div>
+          <span class="text-sm text-white/60 group-hover:text-white/90 transition-colors">Demo Mode</span>
+        </label>
+
+        <div class="ml-4 w-10 h-10 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="Admin"
+            class="w-full h-full object-cover opacity-80">
         </div>
       </div>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main">
-      <!-- Dashboard Panel -->
-      <section class="panel active" id="dashboard">
-        <header class="panel-header">
-          <h1>Dashboard</h1>
-          <div class="controls">
-            <button class="btn btn-success" id="startBtn">▶️ Start</button>
-            <button class="btn btn-danger" id="stopBtn" disabled>⏹️ Stop</button>
-            <label class="checkbox-label">
-              <input type="checkbox" id="demoMode" checked>
-              Demo Mode
-            </label>
+    </header>
+
+    <!-- Dashboard Content -->
+    <section class="panel active flex-1 flex flex-col glass-panel overflow-hidden relative" id="dashboard">
+
+      <div class="flex flex-1 overflow-hidden">
+        <!-- Left Column: Chat (40%) -->
+        <div class="w-full md:w-[40%] flex flex-col border-r border-white/5 bg-black/10 backdrop-blur-sm">
+          <div class="p-4 border-b border-white/5 flex items-center justify-between shrink-0 bg-white/5">
+            <h2 class="text-sm font-semibold flex items-center gap-2 text-white/90">
+              <span class="text-blue-400">💬</span> Live Chat
+            </h2>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span class="text-xs text-white/50">Listening</span>
+            </div>
           </div>
-        </header>
-        
-        <!-- Demo Chat Input -->
-        <div class="demo-input" id="demoInput" style="display: none;">
-          <input type="text" id="demoMessage" placeholder="Ketik pesan untuk simulasi chat...">
-          <button class="btn btn-primary" id="sendDemo">Kirim</button>
-        </div>
-        
-        <!-- Chat Logs -->
-        <div class="chat-container">
-          <h2>💬 Live Chat & Responses</h2>
-          <div class="chat-logs" id="chatLogs">
-            <div class="empty-state">Belum ada chat. Klik Start untuk memulai.</div>
+
+          <!-- Chat Area -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="chatLogs">
+            <!-- Empty State -->
+            <div class="empty-state h-full flex flex-col items-center justify-center text-center opacity-40">
+              <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                <span class="text-3xl grayscale">💤</span>
+              </div>
+              <p class="text-sm font-medium">Ready to connect</p>
+              <p class="text-xs font-light mt-1">Waiting for incoming comments...</p>
+            </div>
           </div>
-        </div>
-      </section>
-      
-      <!-- Settings Panel -->
-      <section class="panel" id="settings">
-        <header class="panel-header">
-          <h1>⚙️ Settings</h1>
-          <button class="btn btn-primary" id="saveSettings">💾 Save Settings</button>
-        </header>
-        
-        <div class="settings-form">
-          <div class="form-group">
-            <label>TikTok Username</label>
-            <input type="text" id="tiktokUsername" placeholder="username_yang_live">
-            <small>Username TikTok yang sedang live (tanpa @)</small>
-          </div>
-          
-          <div class="form-group">
-            <label>Groq API Key</label>
-            <input type="password" id="groqApiKey" placeholder="gsk_...">
-            <small>Dapatkan dari <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a></small>
-          </div>
-          
-          <div class="form-group">
-            <label>ElevenLabs API Key</label>
-            <input type="password" id="elevenlabsApiKey" placeholder="...">
-            <small>Dapatkan dari <a href="https://elevenlabs.io" target="_blank">elevenlabs.io</a></small>
-          </div>
-          
-          <div class="form-group">
-            <label>Voice</label>
-            <select id="voiceId">
-              <option value="pNInz6obpgDQGcFmaJgB">Adam (Pria, deep)</option>
-              <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Wanita, calm)</option>
-              <option value="AZnzlk1XvdvUeBnXmlld">Domi (Wanita, energetic)</option>
-              <option value="EXAVITQu4vr4xnSDxMaL">Bella (Wanita, soft)</option>
-              <option value="ErXwobaYiN019PkySvjV">Antoni (Pria, friendly)</option>
-              <option value="MF3mGyEYCl7XYWbV9V6O">Elli (Wanita, young)</option>
-              <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Pria, narratif)</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label>Response Delay (ms)</label>
-            <input type="number" id="responseDelay" value="2000" min="500" max="10000">
-            <small>Delay sebelum AI merespons (dalam milidetik)</small>
+
+          <!-- Quick Actions / Input Overlay -->
+          <div class="p-3 border-t border-white/5 bg-white/5">
+            <div class="relative">
+              <input type="text" id="manualInput" placeholder="Send manual reply..."
+                class="w-full bg-[#0f0f1a] border border-white/10 rounded-lg pl-3 pr-10 py-2 text-xs focus:border-blue-500/50 outline-none transition-all">
+              <button class="absolute right-2 top-1.5 text-blue-500 hover:text-white transition-colors">➤</button>
+            </div>
           </div>
         </div>
-      </section>
-      
-      <!-- Products Panel -->
-      <section class="panel" id="products">
-        <header class="panel-header">
-          <h1>📦 Products</h1>
-          <button class="btn btn-primary" id="saveProducts">💾 Save Products</button>
-        </header>
-        
-        <div class="products-form">
-          <div class="form-group">
-            <label>Nama Toko</label>
-            <input type="text" id="storeName" placeholder="Nama Toko Anda">
+
+        <!-- Right Column: Analytics & Visuals (60%) -->
+        <div class="hidden md:flex flex-1 flex-col relative overflow-hidden">
+
+          <!-- Status Header -->
+          <div class="p-6">
+            <div
+              class="glass-morphism rounded-2xl p-6 flex items-center justify-between relative overflow-hidden group">
+              <div
+                class="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none">
+              </div>
+
+              <div class="relative z-10">
+                <h2 class="text-2xl font-bold text-white mb-1" id="sessionTitle">Waiting to Connect</h2>
+                <div class="flex items-center gap-2 text-sm font-medium" id="connectionStatus">
+                  <span class="w-2 h-2 bg-gray-500 rounded-full" id="connectionDot"></span>
+                  <span id="connectionText" class="text-white/50">Not connected</span>
+                </div>
+                <div class="mt-4 flex gap-4">
+                  <div class="px-3 py-1 bg-white/5 rounded-lg text-xs text-white/60 border border-white/5">Mode:
+                    <span id="modeLabel">Demo</span>
+                  </div>
+                  <div class="px-3 py-1 bg-white/5 rounded-lg text-xs text-white/60 border border-white/5">Voice: <span
+                      id="voiceLabel">Adam</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-right relative z-10">
+                <div class="text-4xl font-bold text-white font-mono tracking-tight" id="clock">00:00:00</div>
+                <div class="text-xs text-white/40 mt-1 uppercase tracking-widest">Duration</div>
+              </div>
+            </div>
           </div>
-          
-          <h3>Daftar Produk</h3>
-          <div id="productList"></div>
-          <button class="btn btn-secondary" id="addProduct">+ Tambah Produk</button>
-          
-          <h3>Promo</h3>
-          <div id="promoList"></div>
-          <button class="btn btn-secondary" id="addPromo">+ Tambah Promo</button>
+
+          <!-- Stats Grid -->
+          <div class="px-6 grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-white/5 border border-white/5 rounded-2xl p-4 hover:bg-white/10 transition-colors">
+              <div class="flex justify-between items-start mb-2">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">👥</div>
+                <span class="text-xs text-green-400 flex items-center gap-1">+12% ↗</span>
+              </div>
+              <div class="text-2xl font-bold text-white" id="statViewers">0</div>
+              <div class="text-xs text-white/40">Total Viewers</div>
+            </div>
+
+            <div class="bg-white/5 border border-white/5 rounded-2xl p-4 hover:bg-white/10 transition-colors">
+              <div class="flex justify-between items-start mb-2">
+                <div class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400">❤️</div>
+                <span class="text-xs text-green-400 flex items-center gap-1">+5.3% ↗</span>
+              </div>
+              <div class="text-2xl font-bold text-white" id="statLikes">0</div>
+              <div class="text-xs text-white/40">Total Likes</div>
+            </div>
+
+            <div class="bg-white/5 border border-white/5 rounded-2xl p-4 hover:bg-white/10 transition-colors">
+              <div class="flex justify-between items-start mb-2">
+                <div class="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center text-yellow-400">💬
+                </div>
+                <span class="text-xs text-white/40">Rate: 12/s</span>
+              </div>
+              <div class="text-2xl font-bold text-white" id="statComments">0</div>
+              <div class="text-xs text-white/40">Comments Processed</div>
+            </div>
+          </div>
+          <!-- ElevenLabs Usage Monitor -->
+          <div class="flex-1 px-6 pb-6 min-h-0 flex flex-col">
+            <div class="flex-1 glass-morphism rounded-2xl border border-white/5 p-4 relative flex flex-col">
+              <div class="flex justify-between items-center mb-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-white/80">ElevenLabs API Usage</h3>
+                  <div class="flex items-center gap-4 mt-1">
+                    <span class="text-xs text-white/40">Session: <span id="sessionChars"
+                        class="text-blue-400 font-mono">0</span> chars</span>
+                    <span class="text-xs text-white/40">Requests: <span id="requestCount"
+                        class="text-green-400 font-mono">0</span></span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-lg font-bold text-white font-mono" id="lastChars">0</div>
+                  <div class="text-xs text-white/40">Last request</div>
+                </div>
+              </div>
+
+              <!-- Usage Bar Graph -->
+              <div class="flex-1 flex items-end justify-between gap-[2px] px-2 pb-2 relative z-10 min-h-[120px]"
+                id="usageGraph">
+                <!-- Bars will be generated by JS -->
+                <div class="w-full h-full flex items-center justify-center text-white/20 text-xs">No usage data yet
+                </div>
+              </div>
+
+              <!-- X-Axis Label -->
+              <div class="flex justify-between text-[10px] text-white/30 px-2">
+                <span>← Recent</span>
+                <span>Older →</span>
+              </div>
+
+              <!-- Background Grid -->
+              <div class="absolute inset-0 z-0 opacity-10"
+                style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 20px 20px; margin: 80px 20px 40px 20px;">
+              </div>
+            </div>
+          </div>
+
         </div>
-      </section>
-    </main>
-  </div>
-  
+      </div>
+    </section>
+
+    <!-- Settings Panel (Hidden) -->
+    <section class="panel hidden glass-panel flex-1 overflow-hidden flex flex-col" id="settings">
+      <header class="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+        <h1 class="text-xl font-bold">Settings</h1>
+        <button
+          class="bg-[#ff2d55] hover:bg-[#ff4757] text-white px-5 py-2 rounded-xl text-sm font-medium shadow-lg shadow-red-500/20 transition-all cursor-pointer"
+          id="saveSettings">
+          💾 Save Changes
+        </button>
+      </header>
+
+      <div class="overflow-y-auto p-8 custom-scrollbar">
+        <div class="max-w-3xl mx-auto space-y-8">
+
+          <!-- Section 1 -->
+          <div class="bg-white/5 rounded-2xl p-6 border border-white/5">
+            <h3 class="text-lg font-semibold mb-6 flex items-center gap-2 text-white/90">
+              <span class="w-1 h-6 bg-[#ff2d55] rounded-full block"></span> Account & API
+            </h3>
+
+            <div class="space-y-5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="space-y-2">
+                  <label class="text-sm text-white/60 font-medium ml-1">TikTok Username</label>
+                  <input type="text" id="tiktokUsername"
+                    class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#ff2d55]/50 focus:ring-1 focus:ring-[#ff2d55]/50 outline-none transition-all placeholder-white/20"
+                    placeholder="@username">
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm text-white/60 font-medium ml-1">Groq API Key</label>
+                  <div class="relative">
+                    <input type="password" id="groqApiKey"
+                      class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#ff2d55]/50 focus:ring-1 focus:ring-[#ff2d55]/50 outline-none transition-all placeholder-white/20 pr-10"
+                      placeholder="gsk_...">
+                    <button
+                      class="toggle-visibility absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 cursor-pointer"
+                      data-target="groqApiKey">👁️</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-sm text-white/60 font-medium ml-1">ElevenLabs API Key(s)</label>
+                <div class="relative">
+                  <textarea id="elevenlabsApiKey" rows="2"
+                    class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#ff2d55]/50 focus:ring-1 focus:ring-[#ff2d55]/50 outline-none transition-all placeholder-white/20"
+                    placeholder="sk_..."></textarea>
+                  <button class="toggle-visibility absolute right-3 top-3 opacity-50 hover:opacity-100 cursor-pointer"
+                    data-target="elevenlabsApiKey">👁️</button>
+                </div>
+                <p class="text-xs text-white/30 ml-1">Pisahkan dengan koma. Rotasi otomatis jika kuota habis.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2 -->
+          <div class="bg-white/5 rounded-2xl p-6 border border-white/5">
+            <h3 class="text-lg font-semibold mb-6 flex items-center gap-2 text-white/90">
+              <span class="w-1 h-6 bg-[#00d26a] rounded-full block"></span> AI Personality
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label class="text-sm text-white/60 font-medium ml-1">ElevenLabs Voice ID</label>
+                <input type="text" id="voiceId"
+                  class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#ff2d55]/50 focus:ring-1 focus:ring-[#ff2d55]/50 outline-none transition-all placeholder-white/20 font-mono"
+                  placeholder="pNInz6obpgDQGcFmaJgB">
+                <p class="text-xs text-white/30 ml-1">Dapatkan Voice ID dari ElevenLabs dashboard</p>
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-sm text-white/60 font-medium ml-1">Response Delay (ms)</label>
+                <input type="number" id="responseDelay"
+                  class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#ff2d55]/50 focus:ring-1 focus:ring-[#ff2d55]/50 outline-none transition-all"
+                  value="2000">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3 -->
+          <div class="bg-white/5 rounded-2xl p-6 border border-white/5">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-semibold flex items-center gap-2 text-white/90">
+                <span class="w-1 h-6 bg-purple-500 rounded-full block"></span> Smart Filter
+              </h3>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative">
+                  <input type="checkbox" id="filterEnabled" class="sr-only peer">
+                  <div
+                    class="w-11 h-6 bg-[#0f0f1a] border border-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white/50 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 peer-checked:after:bg-white">
+                  </div>
+                </div>
+                <span class="text-sm text-white/60 font-medium" id="filterStatusLabel">Disabled</span>
+              </label>
+            </div>
+
+            <div class="space-y-2 opacity-50 transition-opacity duration-300" id="filterOptions">
+              <label class="text-sm text-white/60 font-medium ml-1">Trigger Keywords</label>
+              <input type="text" id="filterKeywords"
+                class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder-white/20"
+                placeholder="spill, harga, produk, kranjang">
+              <p class="text-xs text-white/30 ml-1">AI hanya akan menjawab komentar yang mengandung kata-kata ini.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Products & Idle Audio Sections (Placeholder for structure) -->
+    <section class="panel hidden glass-panel flex-1 overflow-hidden flex flex-col" id="products">
+      <header class="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+        <h1 class="text-xl font-bold">Products Manager</h1>
+        <button
+          class="bg-[#ff2d55] hover:bg-[#ff4757] text-white px-5 py-2 rounded-xl text-sm font-medium shadow-lg shadow-red-500/20 transition-all cursor-pointer"
+          id="saveProducts">
+          💾 Save Products
+        </button>
+      </header>
+      <div class="flex-1 p-8 overflow-y-auto custom-scrollbar">
+        <div class="grid grid-cols-2 gap-4 mb-8">
+          <div
+            class="bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-white/10 transition-all group"
+            id="addProduct">
+            <div
+              class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mb-3 group-hover:bg-[#ff2d55] transition-colors">
+              <span class="text-2xl text-white/50 group-hover:text-white">+</span>
+            </div>
+            <span class="font-medium text-white/80">Add New Product</span>
+          </div>
+          <div
+            class="bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-white/10 transition-all group"
+            id="addPromo">
+            <div
+              class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mb-3 group-hover:bg-[#00d26a] transition-colors">
+              <span class="text-2xl text-white/50 group-hover:text-white">%</span>
+            </div>
+            <span class="font-medium text-white/80">Add Promo Code</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-8">
+          <label class="text-sm text-white/60 font-medium ml-1">Store Name</label>
+          <input type="text" id="storeName"
+            class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#ff2d55]/50 focus:ring-1 focus:ring-[#ff2d55]/50 outline-none transition-all placeholder-white/20">
+        </div>
+
+        <div id="productList" class="space-y-4"></div>
+        <div id="promoList" class="space-y-4 mt-8"></div>
+      </div>
+    </section>
+
+    <section class="panel hidden glass-panel flex-1 flex flex-col" id="idle-audio">
+      <header class="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+        <h1 class="text-xl font-bold">Idle Audio</h1>
+        <button
+          class="bg-[#ff2d55] hover:bg-[#ff4757] text-white px-5 py-2 rounded-xl text-sm font-medium shadow-lg shadow-red-500/20 transition-all cursor-pointer"
+          id="saveIdleSettings">
+          💾 Save Configuration
+        </button>
+      </header>
+      <div class="p-8 overflow-y-auto custom-scrollbar">
+        <!-- Idle Settings using similar styles -->
+        <div class="bg-white/5 rounded-2xl p-6 border border-white/5 mb-6">
+          <h3 class="text-lg font-semibold mb-6 flex items-center gap-2 text-white/90">
+            <span class="w-1 h-6 bg-blue-500 rounded-full block"></span> Playback Settings
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="flex items-center gap-4 bg-[#0f0f1a] p-4 rounded-xl border border-white/10">
+              <label class="toggle-switch relative cursor-pointer">
+                <input type="checkbox" id="idleAudioEnabled" class="sr-only peer">
+                <div
+                  class="w-10 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                </div>
+              </label>
+              <div class="flex flex-col">
+                <span class="text-sm font-medium">Idle Mode</span>
+                <span class="text-xs text-white/40" id="idleStatusLabel">Inactive</span>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-white/40 ml-1">Interval (Seconds)</label>
+              <input type="number" id="idleInterval"
+                class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-3 py-2 text-sm focus:border-blue-500/50 outline-none"
+                value="30">
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-white/40 ml-1">Playback Mode</label>
+              <select id="idlePlayMode"
+                class="w-full bg-[#0f0f1a] border border-white/10 rounded-xl px-3 py-2 text-sm focus:border-blue-500/50 outline-none">
+                <option value="sequential">Sequential Loop</option>
+                <option value="random">Random Shuffle</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Zone -->
+        <div
+          class="bg-white/5 rounded-2xl p-6 border border-white/5 mb-6 border-dashed border-2 border-white/10 hover:border-blue-500/30 transition-all flex flex-col items-center justify-center text-center py-10"
+          id="dropZone">
+          <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-4 icon-bounce">
+            <span class="text-2xl text-blue-500">☁️</span>
+          </div>
+          <h3 class="text-lg font-medium text-white/90">Upload Audio Files</h3>
+          <p class="text-sm text-white/40 mt-1 mb-6 max-w-sm">Drag & drop your MP3/WAV files here or click the button
+            below.</p>
+
+          <input type="file" id="audioFile" accept=".mp3,.wav,.ogg,.m4a" class="hidden">
+          <div class="flex gap-3 w-full max-w-md">
+            <button id="selectAudioBtn"
+              class="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-all">Select
+              File</button>
+            <input type="text" id="audioDescription" placeholder="Description (Optional)"
+              class="flex-[2] bg-[#0f0f1a] border border-white/10 rounded-xl px-4 text-sm outline-none">
+          </div>
+          <button id="uploadAudioBtn" disabled
+            class="mt-4 px-8 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">Start
+            Upload</button>
+        </div>
+
+        <div id="idleAudioList" class="space-y-3"></div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Clock Script -->
+  <script>
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Toggle filter visual state
+    document.getElementById('filterEnabled').addEventListener('change', function (e) {
+      const options = document.getElementById('filterOptions');
+      if (e.target.checked) {
+        options.classList.remove('opacity-50', 'pointer-events-none');
+      } else {
+        options.classList.add('opacity-50', 'pointer-events-none');
+      }
+    });
+
+    // Simple Tab Logic for Tailwind version (mimics app.js logic but inline for dev, app.js will override)
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active', 'text-white', 'shadow-lg', 'shadow-red-500/20'));
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.add('text-white/60'));
+        btn.classList.add('active', 'text-white', 'shadow-lg', 'shadow-red-500/20');
+        btn.classList.remove('text-white/60');
+
+        const panelId = btn.dataset.panel;
+        document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+        document.getElementById(panelId).classList.remove('hidden');
+      });
+    });
+  </script>
   <script src="app.js"></script>
 </body>
+
 </html>

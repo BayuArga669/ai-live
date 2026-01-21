@@ -36,6 +36,9 @@ export class AudioPlayer extends EventEmitter {
         console.log(`▶️ Playing: ${audioPath}`);
 
         try {
+            // Delay to ensure audio buffer is ready (prevents cut-off at start)
+            await new Promise(resolve => setTimeout(resolve, 300));
+
             // sound-play plays audio directly without opening media player
             await soundPlay.play(audioPath, 1); // 1 = volume (0-1)
             console.log('✅ Playback complete');
